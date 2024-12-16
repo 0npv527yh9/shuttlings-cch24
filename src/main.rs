@@ -1,6 +1,6 @@
 use axum::{
     http::{header, HeaderName, StatusCode},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 
@@ -114,6 +114,8 @@ mod day2 {
     }
 }
 
+mod day5;
+
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
     let router = Router::new()
@@ -122,7 +124,8 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/2/dest", get(day2::task1::dest))
         .route("/2/key", get(day2::task2::key))
         .route("/2/v6/dest", get(day2::task3::dest))
-        .route("/2/v6/key", get(day2::task3::key));
+        .route("/2/v6/key", get(day2::task3::key))
+        .route("/5/manifest", post(day5::task1::manifest));
 
     Ok(router.into())
 }
