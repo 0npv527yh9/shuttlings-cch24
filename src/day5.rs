@@ -1,60 +1,61 @@
 pub mod task1 {
 
+    use std::fmt::Display;
+
     use axum::http::StatusCode;
-    use serde::Deserialize;
     use toml::{Table, Value};
 
-    #[derive(Deserialize)]
-    struct Manifest {
-        package: Package,
-    }
-
-    #[derive(Deserialize)]
-    struct Package {
-        name: String,
-        authors: Vec<String>,
-        keywords: Vec<String>,
-        metadata: Metadata,
-    }
-
-    #[derive(Deserialize)]
-    struct Metadata {
-        orders: Option<Vec<Option<Order>>>,
-    }
-
-    #[derive(Deserialize, Debug)]
     struct Order {
         item: String,
         quantity: u32,
     }
 
+    impl Display for Order {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_fmt(format_args!("{}: {}", self.item, self.quantity))
+        }
+    }
+
     pub async fn manifest(body: String) -> (StatusCode, String) {
-        println!("{:?}", body);
         let manifest = body.parse::<Table>().unwrap();
+        println!("{manifest:?}");
 
-        let package = manifest.get("package").unwrap();
-        let metadata = match package.get("metadata") {
-            Some(metadata) => metadata,
-            None => return (StatusCode::NO_CONTENT, String::new()),
-        };
-
-        let orders = metadata.get("orders");
-        let mut res = vec![];
-        if let Some(Value::Array(orders)) = orders {
-            for order in orders {
-                if let Value::Table(order) = order {
-                    if let Some(Value::String(item)) = order.get("item") {
-                        if let Some(Value::Integer(quantity)) = order.get("quantity") {
-                            res.push(format!("{}: {}", item, quantity));
+        let parse = || -> Option<Vec<Order>> {
+            let orders = manifest
+                .get("package")?
+                .get("metadata")?
+                .get("orders")?
+                .as_array()?
+                .iter()
+                .filter_map(|order| {
+                    if let Value::Table(order) = order {
+                        if let (Some(Value::String(item)), Some(Value::Integer(quantity))) =
+                            (order.get("item"), order.get("quantity"))
+                        {
+                            return Some(Order {
+                                item: item.to_owned(),
+                                quantity: *quantity as u32,
+                            });
                         }
                     }
-                }
-            }
-            if !res.is_empty() {
-                return (StatusCode::OK, res.join("\n"));
+                    None
+                })
+                .collect::<Vec<_>>();
+            Some(orders)
+        };
+
+        if let Some(orders) = parse() {
+            if !orders.is_empty() {
+                return (
+                    StatusCode::OK,
+                    orders
+                        .iter()
+                        .map(Order::to_string)
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                );
             }
         }
-
         (StatusCode::NO_CONTENT, String::new())
     }
 }
