@@ -1,8 +1,9 @@
 pub mod task1 {
 
-    use std::fmt::Display;
+    use std::{fmt::Display, str::FromStr};
 
     use axum::http::StatusCode;
+    use cargo_manifest::Manifest;
     use toml::{Table, Value};
 
     struct Order {
@@ -17,8 +18,11 @@ pub mod task1 {
     }
 
     pub async fn manifest(body: String) -> (StatusCode, String) {
+        if Manifest::from_str(&body).is_err() {
+            return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string());
+        }
+
         let manifest = body.parse::<Table>().unwrap();
-        println!("{manifest:?}");
 
         let parse = || -> Option<Vec<Order>> {
             let orders = manifest
