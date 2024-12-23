@@ -18,8 +18,21 @@ pub mod task1 {
     }
 
     pub async fn manifest(body: String) -> (StatusCode, String) {
-        if Manifest::from_str(&body).is_err() {
-            return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string());
+        let manifest = match Manifest::from_str(&body) {
+            Ok(manifest) => manifest,
+            Err(_) => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
+        };
+
+        let is_valid_keywords = match (|| manifest.package?.keywords?.as_local())() {
+            Some(keywords) => keywords.contains(&"Christmas 2024".to_string()),
+            None => false,
+        };
+
+        if !is_valid_keywords {
+        return (
+                StatusCode::BAD_REQUEST,
+                "Magic keyword not provided".to_string(),
+            );
         }
 
         let manifest = body.parse::<Table>().unwrap();
