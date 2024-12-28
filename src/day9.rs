@@ -54,16 +54,20 @@ pub fn create_milk_bucket() -> Arc<RateLimiter> {
 pub enum Volume {
     Gallons(f32),
     Liters(f32),
+    Litres(f32),
+    Pints(f32),
 }
 
 impl Volume {
-    const GALLON_PER_LITER: f32 = 0.26417206;
     const LITER_PER_GALLON: f32 = 3.785412;
+    const LITRES_PER_PINT: f32 = 0.56826127;
 
     fn switch_unit(self) -> Self {
         match self {
             Volume::Gallons(gallon) => Volume::Liters(gallon * Volume::LITER_PER_GALLON),
-            Volume::Liters(liters) => Volume::Gallons(liters * Volume::GALLON_PER_LITER),
+            Volume::Liters(liters) => Volume::Gallons(liters / Volume::LITER_PER_GALLON),
+            Volume::Litres(litres) => Volume::Pints(litres / Volume::LITRES_PER_PINT),
+            Volume::Pints(pints) => Volume::Litres(pints * Volume::LITRES_PER_PINT),
         }
     }
 }
