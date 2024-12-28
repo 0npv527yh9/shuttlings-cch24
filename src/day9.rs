@@ -1,17 +1,21 @@
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
+    response::IntoResponse,
 };
 use leaky_bucket::RateLimiter;
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 pub async fn milk(
-    milk_bucket: State<Arc<RateLimiter>>,
+    milk_bucket: State<Arc<Mutex<RateLimiter>>>,
     headers: HeaderMap,
     body: String,
 ) -> (StatusCode, String) {
-    let has_milk = milk_bucket.try_acquire(1);
+    let has_milk = milk_bucket.lock().unwrap().try_acquire(1);
 
     let content_type = headers
         .get("Content-Type")
@@ -30,6 +34,12 @@ pub async fn milk(
     }
 }
 
+pub async fn refill(milk_bucket: State<Arc<Mutex<RateLimiter>>>) -> impl IntoResponse {
+    let mut milk_bucket = milk_bucket.lock().unwrap();
+    *milk_bucket = create_milk_bucket();
+    StatusCode::OK
+}
+
 fn task1(has_milk: bool) -> (StatusCode, String) {
     if has_milk {
         (StatusCode::OK, "Milk withdrawn\n".to_string())
@@ -41,12 +51,12 @@ fn task1(has_milk: bool) -> (StatusCode, String) {
     }
 }
 
-pub fn create_milk_bucket() -> Arc<RateLimiter> {
-    let rate_limiter = RateLimiter::builder()
+pub fn create_milk_bucket() -> RateLimiter {
+    RateLimiter::builder()
         .max(5)
+        .initial(5)
         .interval(Duration::from_secs(1))
-        .build();
-    Arc::new(rate_limiter)
+        .build()
 }
 
 #[derive(Serialize, Deserialize, Debug)]
