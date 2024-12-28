@@ -2,7 +2,7 @@ pub mod task1 {
 
     use std::{fmt::Display, str::FromStr};
 
-    use axum::http::StatusCode;
+    use axum::http::{HeaderMap, StatusCode};
     use cargo_manifest::{Manifest, MaybeInherited};
     use toml::Value;
 
@@ -17,10 +17,21 @@ pub mod task1 {
         }
     }
 
-    pub async fn manifest(body: String) -> (StatusCode, String) {
-        let manifest = match Manifest::from_str(&body) {
-            Ok(manifest) => manifest,
-            Err(_) => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
+    pub async fn manifest(headers: HeaderMap, body: String) -> (StatusCode, String) {
+        let content_type = headers
+            .get("Content-Type")
+            .and_then(|content_type| content_type.to_str().ok());
+
+        let manifest: Option<Manifest> = match content_type {
+            Some("application/toml") => toml::from_str(&body).ok(),
+            Some("application/yaml") => serde_yml::from_str(&body).ok(),
+            Some("application/json") => serde_json::from_str(&body).ok(),
+            _ => return (StatusCode::UNSUPPORTED_MEDIA_TYPE, String::from("")),
+        };
+
+        let manifest = match manifest {
+            Some(manifest) => manifest,
+            None => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
         };
 
         let is_valid_keywords = match get_keywords(&manifest) {
