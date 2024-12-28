@@ -4,6 +4,7 @@ use axum::{
 };
 use std::sync::{Arc, Mutex};
 
+mod day12;
 mod day2;
 mod day5;
 mod day9;
@@ -12,6 +13,7 @@ mod day_1;
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
     let milk_bucket = Arc::new(Mutex::new(day9::create_milk_bucket()));
+    let board = Arc::new(Mutex::new(day12::create_board()));
 
     let router = Router::new()
         .route("/", get(day_1::hello_world))
@@ -24,7 +26,11 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/9/milk", post(day9::milk))
         .with_state(milk_bucket.clone())
         .route("/9/refill", post(day9::refill))
-        .with_state(milk_bucket);
+        .with_state(milk_bucket)
+        .route("/12/board", get(day12::board))
+        .with_state(board.clone())
+        .route("/12/reset", post(day12::reset))
+        .with_state(board);
 
     Ok(router.into())
 }
