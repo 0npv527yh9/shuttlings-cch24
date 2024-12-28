@@ -125,7 +125,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/2/key", get(day2::task2::key))
         .route("/2/v6/dest", get(day2::task3::dest))
         .route("/2/v6/key", get(day2::task3::key))
-        .route("/5/manifest", post(day5::task1::manifest));
+        .route("/5/manifest", post(day5::manifest));
 
     Ok(router.into())
 }
