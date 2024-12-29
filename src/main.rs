@@ -13,7 +13,7 @@ mod day_1;
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
     let milk_bucket = Arc::new(Mutex::new(day9::create_milk_bucket()));
-    let board = Arc::new(Mutex::new(day12::create_board()));
+    let board_state = Arc::new(Mutex::new(day12::create_state()));
 
     let router = Router::new()
         .route("/", get(day_1::hello_world))
@@ -28,11 +28,13 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/9/refill", post(day9::refill))
         .with_state(milk_bucket)
         .route("/12/board", get(day12::board))
-        .with_state(board.clone())
+        .with_state(board_state.clone())
         .route("/12/reset", post(day12::reset))
-        .with_state(board.clone())
+        .with_state(board_state.clone())
         .route("/12/place/:team/:column", post(day12::place))
-        .with_state(board);
+        .with_state(board_state.clone())
+        .route("/12/random-board", get(day12::random_board))
+        .with_state(board_state);
 
     Ok(router.into())
 }

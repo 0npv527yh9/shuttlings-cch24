@@ -2,29 +2,35 @@ mod board;
 mod entity;
 
 use axum::{
-    extract::{Path, State},
+    extract::{self, Path},
     http::StatusCode,
     response::IntoResponse,
 };
-use board::Board;
+use board::{Board, BoardRng};
 use entity::{PlaceResponse, Team};
-use std::sync::{Arc, Mutex};
+use rand::rngs::StdRng;
+use std::{
+    ops::DerefMut,
+    sync::{Arc, Mutex},
+};
 
-pub async fn board(board: State<Arc<Mutex<Board>>>) -> impl IntoResponse {
-    board.lock().unwrap().to_string()
+pub async fn board(state: extract::State<Arc<Mutex<State>>>) -> impl IntoResponse {
+    state.lock().unwrap().board.to_string()
 }
 
-pub async fn reset(board: State<Arc<Mutex<Board>>>) -> impl IntoResponse {
-    let mut board = board.lock().unwrap();
+pub async fn reset(state: extract::State<Arc<Mutex<State>>>) -> impl IntoResponse {
+    let mut guard = state.lock().unwrap();
+    let State { board, rng } = guard.deref_mut();
     board.reset();
+    *rng = StdRng::new();
     board.to_string()
 }
 
 pub async fn place(
-    board: State<Arc<Mutex<Board>>>,
+    state: extract::State<Arc<Mutex<State>>>,
     Path((team, column)): Path<(Team, usize)>,
 ) -> impl IntoResponse {
-    let mut board = board.lock().unwrap();
+    let board = &mut state.lock().unwrap().board;
 
     match board.place(team, column) {
         PlaceResponse::InvalidColumn => (StatusCode::BAD_REQUEST, String::new()),
@@ -35,6 +41,21 @@ pub async fn place(
     }
 }
 
-pub fn create_board() -> Board {
-    Board::new()
+pub async fn random_board(state: extract::State<Arc<Mutex<State>>>) -> impl IntoResponse {
+    let mut guard = state.lock().unwrap();
+    let State { board, rng } = guard.deref_mut();
+    board.make_random(rng);
+    board.to_string()
+}
+
+pub fn create_state() -> State {
+    State {
+        board: Board::new(),
+        rng: StdRng::new(),
+    }
+}
+
+pub struct State {
+    board: Board,
+    rng: StdRng,
 }
