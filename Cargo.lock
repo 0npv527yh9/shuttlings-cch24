@@ -1713,6 +1713,8 @@ dependencies = [
  "serde_yml",
  "shuttle-axum",
  "shuttle-runtime",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
  "tokio",
  "toml",
 ]

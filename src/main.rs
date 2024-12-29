@@ -30,6 +30,8 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/12/board", get(day12::board))
         .with_state(board.clone())
         .route("/12/reset", post(day12::reset))
+        .with_state(board.clone())
+        .route("/12/place/:team/:column", post(day12::place))
         .with_state(board);
 
     Ok(router.into())
