@@ -1,4 +1,5 @@
 mod entity;
+mod scheme;
 
 use axum::{
     extract::{Path, State},
@@ -6,6 +7,7 @@ use axum::{
     Json,
 };
 use entity::{InsertQuote, Quote, UpdateQuote};
+pub use scheme::create_tables;
 use sqlx::PgPool;
 use std::{ops::Deref, sync::Arc};
 use uuid::Uuid;
