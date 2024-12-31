@@ -5,10 +5,7 @@ use axum_extra::extract::{cookie::Cookie, CookieJar};
 use entity::{Claims, Key};
 use jsonwebtoken::{errors::ErrorKind, Algorithm, DecodingKey, Header, Validation};
 use serde_json::Value;
-use std::{
-    fs,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 pub async fn wrap(State(key): State<Arc<Mutex<Key>>>, body: String) -> impl IntoResponse {
     let header = Header::default();
@@ -63,6 +60,6 @@ pub fn create_key() -> Key {
 }
 
 pub fn load_santa_public_key() -> DecodingKey {
-    let public_key = fs::read_to_string("src/day16/day16_santa_public_key.pem").unwrap();
+    let public_key = include_str!("day16_santa_public_key.pem");
     DecodingKey::from_rsa_pem(public_key.as_bytes()).unwrap()
 }
