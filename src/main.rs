@@ -2,6 +2,7 @@ mod day12;
 mod day16;
 mod day19;
 mod day2;
+mod day23;
 mod day5;
 mod day9;
 mod day_1;
@@ -69,7 +70,8 @@ async fn main(
         .with_state(pool)
         .route("/19/list", get(day19::list))
         .with_state(list_state)
-        .nest_service("/assets", ServeDir::new("assets"));
+        .nest_service("/assets", ServeDir::new("assets"))
+        .route("/23/star", get(day23::star));
 
     Ok(router.into())
 }
