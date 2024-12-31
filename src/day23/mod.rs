@@ -32,6 +32,8 @@ pub async fn ornament(
         .parse::<State>()
         .map_err(|_| StatusCode::IM_A_TEAPOT)?;
 
+    let n = html_escape::encode_safe(&n);
+
     let html = match next_state {
         State::On => {
             format!(
