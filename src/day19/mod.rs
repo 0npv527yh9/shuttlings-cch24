@@ -1,15 +1,23 @@
-mod entity;
+pub mod domain;
 mod scheme;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
-use entity::{InsertQuote, Quote, UpdateQuote};
+use domain::{
+    model::{Quote, QuoteList},
+    request::{InsertQuote, Token, UpdateQuote},
+};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 pub use scheme::create_tables;
 use sqlx::PgPool;
-use std::{ops::Deref, sync::Arc};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::{Arc, Mutex},
+};
 use uuid::Uuid;
 
 pub async fn reset(State(pool): State<Arc<PgPool>>) {
@@ -67,6 +75,59 @@ pub async fn undo(
     .map(|quote| serde_json::to_string(&quote).unwrap())
 }
 
+pub struct ListState {
+    pub pool: PgPool,
+    page_map: Mutex<HashMap<String, i32>>,
+}
+
+pub fn create_list_state(pool: PgPool) -> ListState {
+    ListState {
+        pool,
+        page_map: Mutex::new(HashMap::new()),
+    }
+}
+
+pub async fn list(
+    Query(token): Query<Token>,
+    State(state): State<Arc<ListState>>,
+) -> Result<String, StatusCode> {
+    let page = match token.token {
+        Some(token) => {
+            let page_map = state.page_map.lock().unwrap();
+            *page_map.get(&token).ok_or(StatusCode::BAD_REQUEST)?
+        }
+        None => 0,
+    };
+
+    let mut quotes = sqlx::query_as::<_, Quote>(
+        r#"SELECT * FROM quotes
+        ORDER BY created_at ASC
+        LIMIT 4 OFFSET $1 * 3;"#,
+    )
+    .bind(page)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap();
+
+    let next_token = (quotes.len() == 4).then(|| {
+        quotes.pop();
+
+        let next_token = generate_random_string();
+        let next_page = page + 1;
+        let mut page_map = state.page_map.lock().unwrap();
+        page_map.insert(next_token.clone(), next_page);
+
+        next_token
+    });
+
+    Ok(serde_json::to_string(&QuoteList {
+        quotes,
+        page: page + 1,
+        next_token,
+    })
+    .unwrap())
+}
+
 pub async fn draft(
     State(pool): State<Arc<PgPool>>,
     Json(insert_quote): Json<InsertQuote>,
@@ -83,4 +144,12 @@ pub async fn draft(
     .unwrap();
 
     (StatusCode::CREATED, serde_json::to_string(&quote).unwrap())
+}
+
+fn generate_random_string() -> String {
+    thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(16)
+        .map(char::from)
+        .collect()
 }

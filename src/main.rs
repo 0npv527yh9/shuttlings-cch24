@@ -26,6 +26,8 @@ async fn main(
     let santa_publilc_key = Arc::new(Mutex::new(day16::load_santa_public_key()));
 
     day19::create_tables(&pool).await;
+
+    let list_state = Arc::new(day19::create_list_state(pool.clone()));
     let pool = Arc::new(pool);
 
     let router = Router::new()
@@ -63,7 +65,9 @@ async fn main(
         .route("/19/undo/:id", put(day19::undo))
         .with_state(pool.clone())
         .route("/19/draft", post(day19::draft))
-        .with_state(pool);
+        .with_state(pool)
+        .route("/19/list", get(day19::list))
+        .with_state(list_state);
 
     Ok(router.into())
 }
