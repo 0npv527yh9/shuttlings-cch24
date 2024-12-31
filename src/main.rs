@@ -24,7 +24,7 @@ async fn main(
     let board_state = Arc::new(Mutex::new(day12::create_state()));
     let key = Arc::new(Mutex::new(day16::create_key()));
     let santa_publilc_key = Arc::new(Mutex::new(day16::load_santa_public_key()));
-    let pool = Arc::new(day19::migrate(pool).await);
+    let pool = Arc::new(pool);
 
     let router = Router::new()
         .route("/", get(day_1::hello_world))

@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
-use sqlx::types::chrono::{DateTime, Utc};
+use sqlx::{
+    prelude::FromRow,
+    types::chrono::{DateTime, Utc},
+};
 use uuid::Uuid;
 
-#[derive(Serialize)]
+#[derive(Serialize, FromRow)]
 pub struct Quote {
     pub id: Uuid,
     pub author: String,
