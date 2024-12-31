@@ -12,6 +12,7 @@ use axum::{
 };
 use sqlx::PgPool;
 use std::sync::{Arc, Mutex};
+use tower_http::services::ServeDir;
 
 #[shuttle_runtime::main]
 async fn main(
@@ -67,7 +68,8 @@ async fn main(
         .route("/19/draft", post(day19::draft))
         .with_state(pool)
         .route("/19/list", get(day19::list))
-        .with_state(list_state);
+        .with_state(list_state)
+        .nest_service("/assets", ServeDir::new("assets"));
 
     Ok(router.into())
 }
