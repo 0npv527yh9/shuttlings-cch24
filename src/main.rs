@@ -16,6 +16,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
     let milk_bucket = Arc::new(Mutex::new(day9::create_milk_bucket()));
     let board_state = Arc::new(Mutex::new(day12::create_state()));
     let key = Arc::new(Mutex::new(day16::create_key()));
+    let santa_publilc_key = Arc::new(Mutex::new(day16::load_santa_public_key()));
 
     let router = Router::new()
         .route("/", get(day_1::hello_world))
@@ -40,7 +41,9 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/16/wrap", post(day16::wrap))
         .with_state(key.clone())
         .route("/16/unwrap", get(day16::unwrap))
-        .with_state(key);
+        .with_state(key)
+        .route("/16/decode", post(day16::decode))
+        .with_state(santa_publilc_key);
 
     Ok(router.into())
 }

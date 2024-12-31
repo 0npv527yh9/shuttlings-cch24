@@ -20,16 +20,4 @@ impl From<&str> for Key {
 #[derive(Serialize, Deserialize)]
 pub struct Claims {
     pub gift: String,
-    exp: u64,
-}
-
-impl Claims {
-    const EXPIRE_SECONDS: u64 = 3600;
-
-    pub fn new(gift: &str) -> Self {
-        Self {
-            gift: gift.to_string(),
-            exp: jsonwebtoken::get_current_timestamp() + Self::EXPIRE_SECONDS,
-        }
-    }
 }
