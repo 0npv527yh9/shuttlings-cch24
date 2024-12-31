@@ -18,4 +18,11 @@ pub mod models {
             }
         }
     }
+
+    #[derive(EnumString, Display)]
+    #[strum(serialize_all = "snake_case")]
+    pub enum State {
+        On,
+        Off,
+    }
 }

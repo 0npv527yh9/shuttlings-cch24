@@ -72,7 +72,8 @@ async fn main(
         .with_state(list_state)
         .nest_service("/assets", ServeDir::new("assets"))
         .route("/23/star", get(day23::star))
-        .route("/23/present/:color", get(day23::present));
+        .route("/23/present/:color", get(day23::present))
+        .route("/23/ornament/:state/:n", get(day23::ornament));
 
     Ok(router.into())
 }
