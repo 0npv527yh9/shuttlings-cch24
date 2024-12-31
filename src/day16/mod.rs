@@ -63,6 +63,6 @@ pub fn create_key() -> Key {
 }
 
 pub fn load_santa_public_key() -> DecodingKey {
-    let public_key = fs::read_to_string("key/day16_santa_public_key.pem").unwrap();
+    let public_key = fs::read_to_string("src/day16/day16_santa_public_key.pem").unwrap();
     DecodingKey::from_rsa_pem(public_key.as_bytes()).unwrap()
 }
