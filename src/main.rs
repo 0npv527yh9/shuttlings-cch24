@@ -73,7 +73,8 @@ async fn main(
         .nest_service("/assets", ServeDir::new("assets"))
         .route("/23/star", get(day23::star))
         .route("/23/present/:color", get(day23::present))
-        .route("/23/ornament/:state/:n", get(day23::ornament));
+        .route("/23/ornament/:state/:n", get(day23::ornament))
+        .route("/23/lockfile", post(day23::lockfile));
 
     Ok(router.into())
 }

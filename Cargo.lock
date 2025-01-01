@@ -2395,6 +2395,7 @@ dependencies = [
  "axum 0.7.9",
  "axum-extra",
  "cargo-manifest",
+ "hex",
  "html-escape",
  "itertools 0.13.0",
  "jsonwebtoken",
