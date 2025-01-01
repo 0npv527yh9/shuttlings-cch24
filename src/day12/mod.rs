@@ -2,32 +2,32 @@ mod board;
 mod entity;
 
 use axum::{
-    extract::{self, Path},
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
 };
 use board::{Board, BoardRng};
 use entity::{PlaceResponse, Team};
-use rand::rngs::StdRng;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{
     ops::DerefMut,
     sync::{Arc, Mutex},
 };
 
-pub async fn board(state: extract::State<Arc<Mutex<State>>>) -> impl IntoResponse {
+pub async fn board(state: State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
     state.lock().unwrap().board.to_string()
 }
 
-pub async fn reset(state: extract::State<Arc<Mutex<State>>>) -> impl IntoResponse {
+pub async fn reset(state: State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
     let mut guard = state.lock().unwrap();
-    let State { board, rng } = guard.deref_mut();
+    let AppState { board, rng } = guard.deref_mut();
     board.reset();
     *rng = StdRng::new();
     board.to_string()
 }
 
 pub async fn place(
-    state: extract::State<Arc<Mutex<State>>>,
+    state: State<Arc<Mutex<AppState>>>,
     Path((team, column)): Path<(Team, usize)>,
 ) -> impl IntoResponse {
     let board = &mut state.lock().unwrap().board;
@@ -41,21 +41,21 @@ pub async fn place(
     }
 }
 
-pub async fn random_board(state: extract::State<Arc<Mutex<State>>>) -> impl IntoResponse {
+pub async fn random_board(state: State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
     let mut guard = state.lock().unwrap();
-    let State { board, rng } = guard.deref_mut();
+    let AppState { board, rng } = guard.deref_mut();
     board.make_random(rng);
     board.to_string()
 }
 
-pub fn create_state() -> State {
-    State {
+pub fn create_state() -> AppState {
+    AppState {
         board: Board::new(),
-        rng: StdRng::new(),
+        rng: StdRng::seed_from_u64(2024),
     }
 }
 
-pub struct State {
+pub struct AppState {
     board: Board,
     rng: StdRng,
 }
