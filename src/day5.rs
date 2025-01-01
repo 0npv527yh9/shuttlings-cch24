@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use axum::http::{HeaderMap, StatusCode};
-use cargo_manifest::{Manifest, MaybeInherited};
+use cargo_manifest::{Manifest, Package};
 use itertools::Itertools;
 use toml::Value;
 
@@ -32,30 +32,29 @@ pub async fn manifest(
     }
     .ok_or((StatusCode::BAD_REQUEST, "Invalid manifest"))?;
 
-    get_keywords(&manifest)
-        .filter(|&keywords| keywords.contains(&"Christmas 2024".to_string()))
+    let (keywords, metadata) = match manifest.package {
+        Some(Package {
+            keywords, metadata, ..
+        }) => {
+            let keywords = keywords.and_then(|keywords| keywords.as_local());
+            (keywords, metadata)
+        }
+        None => (None, None),
+    };
+
+    keywords
+        .filter(|keywords| keywords.contains(&"Christmas 2024".to_string()))
         .ok_or((StatusCode::BAD_REQUEST, "Magic keyword not provided"))?;
 
-    if let Some(orders) = get_orders(&manifest).filter(|orders| !orders.is_empty()) {
+    if let Some(orders) = into_orders(metadata).filter(|orders| !orders.is_empty()) {
         Ok(orders.iter().join("\n"))
     } else {
         Err((StatusCode::NO_CONTENT, ""))
     }
 }
 
-fn get_keywords(manifest: &Manifest) -> Option<&Vec<String>> {
-    match manifest.package.as_ref()?.keywords.as_ref()? {
-        MaybeInherited::Local(keywords) => Some(keywords),
-        _ => None,
-    }
-}
-
-fn get_orders(manifest: &Manifest) -> Option<Vec<Order>> {
-    let orders = manifest
-        .package
-        .as_ref()?
-        .metadata
-        .as_ref()?
+fn into_orders(metadata: Option<Value>) -> Option<Vec<Order>> {
+    let orders = metadata?
         .get("orders")?
         .as_array()?
         .iter()
