@@ -7,12 +7,17 @@ use axum::{
     response::IntoResponse,
 };
 use board::{Board, BoardRng};
-use entity::{PlaceResponse, Team};
+use entity::{PlaceError, Team};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     ops::DerefMut,
     sync::{Arc, Mutex},
 };
+
+pub struct AppState {
+    board: Board,
+    rng: StdRng,
+}
 
 pub async fn board(state: State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
     state.lock().unwrap().board.to_string()
@@ -29,15 +34,23 @@ pub async fn reset(state: State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
 pub async fn place(
     state: State<Arc<Mutex<AppState>>>,
     Path((team, column)): Path<(Team, usize)>,
-) -> impl IntoResponse {
+) -> Result<String, (StatusCode, String)> {
     let board = &mut state.lock().unwrap().board;
 
     match board.place(team, column) {
-        PlaceResponse::InvalidColumn => (StatusCode::BAD_REQUEST, String::new()),
-        PlaceResponse::AlreadyFinished | PlaceResponse::FulledColumn => {
-            (StatusCode::SERVICE_UNAVAILABLE, board.to_string())
+        Ok(_) => Ok(board.to_string()),
+        Err(error) => Err((error.into(), board.to_string())),
+    }
+}
+
+impl From<PlaceError> for StatusCode {
+    fn from(value: PlaceError) -> Self {
+        match value {
+            PlaceError::InvalidColumn => StatusCode::BAD_REQUEST,
+            PlaceError::AlreadyFinished | PlaceError::FulledColumn => {
+                StatusCode::SERVICE_UNAVAILABLE
+            }
         }
-        PlaceResponse::Ok => (StatusCode::OK, board.to_string()),
     }
 }
 
@@ -53,9 +66,4 @@ pub fn create_state() -> AppState {
         board: Board::new(),
         rng: StdRng::seed_from_u64(2024),
     }
-}
-
-pub struct AppState {
-    board: Board,
-    rng: StdRng,
 }

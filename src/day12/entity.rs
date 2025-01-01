@@ -40,9 +40,8 @@ pub enum BoardState {
     Finished(Option<Team>),
 }
 
-pub enum PlaceResponse {
+pub enum PlaceError {
     AlreadyFinished,
     InvalidColumn,
     FulledColumn,
-    Ok,
 }

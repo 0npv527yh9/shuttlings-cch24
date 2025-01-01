@@ -1,4 +1,4 @@
-use super::entity::{BoardState, PlaceResponse, Team, Tile};
+use super::entity::{BoardState, PlaceError, Team, Tile};
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fmt::Display, iter};
@@ -21,11 +21,11 @@ impl Board {
         self.tiles.iter_mut().for_each(|row| row.fill(Tile::Empty));
     }
 
-    pub fn place(&mut self, team: Team, column: usize) -> PlaceResponse {
+    pub fn place(&mut self, team: Team, column: usize) -> Result<(), PlaceError> {
         let is_valid_column = (1..=Board::W).contains(&column);
 
         if !is_valid_column {
-            PlaceResponse::InvalidColumn
+            Err(PlaceError::InvalidColumn)
         } else {
             let col = column - 1;
 
@@ -34,13 +34,13 @@ impl Board {
                 .find(|&i| self.tiles[i][col] == Tile::Empty);
 
             match empty_row {
-                None => PlaceResponse::FulledColumn,
+                None => Err(PlaceError::FulledColumn),
                 Some(row) => match self.state() {
-                    BoardState::Finished(_) => PlaceResponse::AlreadyFinished,
+                    BoardState::Finished(_) => Err(PlaceError::AlreadyFinished),
                     BoardState::Playing => {
                         let tile = Tile::from(team);
                         self.tiles[row][col] = tile;
-                        PlaceResponse::Ok
+                        Ok(())
                     }
                 },
             }
