@@ -14,7 +14,7 @@ pub async fn milk(
     milk_bucket: State<Arc<Mutex<RateLimiter>>>,
     headers: HeaderMap,
     body: String,
-) -> (StatusCode, String) {
+) -> Result<String, (StatusCode, &'static str)> {
     let has_milk = milk_bucket.lock().unwrap().try_acquire(1);
 
     let content_type = headers
@@ -25,12 +25,18 @@ pub async fn milk(
         Some("application/json") => {
             if let Ok(volume) = serde_json::from_str::<Volume>(&body) {
                 let volume = volume.switch_unit();
-                (StatusCode::OK, serde_json::to_string(&volume).unwrap())
+                Ok(serde_json::to_string(&volume).unwrap())
             } else {
-                (StatusCode::BAD_REQUEST, String::new())
+                Err((StatusCode::BAD_REQUEST, ""))
             }
         }
-        _ => task1(has_milk),
+        _ => {
+            if has_milk {
+                Ok("Milk withdrawn\n".to_string())
+            } else {
+                Err((StatusCode::TOO_MANY_REQUESTS, "No milk available\n"))
+            }
+        }
     }
 }
 
@@ -38,17 +44,6 @@ pub async fn refill(milk_bucket: State<Arc<Mutex<RateLimiter>>>) -> impl IntoRes
     let mut milk_bucket = milk_bucket.lock().unwrap();
     *milk_bucket = create_milk_bucket();
     StatusCode::OK
-}
-
-fn task1(has_milk: bool) -> (StatusCode, String) {
-    if has_milk {
-        (StatusCode::OK, "Milk withdrawn\n".to_string())
-    } else {
-        (
-            StatusCode::TOO_MANY_REQUESTS,
-            "No milk available\n".to_string(),
-        )
-    }
 }
 
 pub fn create_milk_bucket() -> RateLimiter {
