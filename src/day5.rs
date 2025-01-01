@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use axum::http::{HeaderMap, StatusCode};
 use cargo_manifest::{Manifest, MaybeInherited};
+use itertools::Itertools;
 use toml::Value;
 
 struct Order {
@@ -15,55 +16,30 @@ impl Display for Order {
     }
 }
 
-pub async fn manifest(headers: HeaderMap, body: String) -> (StatusCode, String) {
+pub async fn manifest(
+    headers: HeaderMap,
+    body: String,
+) -> Result<String, (StatusCode, &'static str)> {
     let content_type = headers
         .get("Content-Type")
         .and_then(|content_type| content_type.to_str().ok());
 
-    let manifest: Option<Manifest> = match content_type {
+    let manifest: Manifest = match content_type {
         Some("application/toml") => toml::from_str(&body).ok(),
         Some("application/yaml") => serde_yml::from_str(&body).ok(),
         Some("application/json") => serde_json::from_str(&body).ok(),
-        _ => return (StatusCode::UNSUPPORTED_MEDIA_TYPE, String::from("")),
-    };
-
-    let manifest = match manifest {
-        Some(manifest) => manifest,
-        None => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
-    };
-
-    let is_valid_keywords = match get_keywords(&manifest) {
-        Some(keywords) => keywords.contains(&"Christmas 2024".to_string()),
-        None => false,
-    };
-
-    if !is_valid_keywords {
-        return (
-            StatusCode::BAD_REQUEST,
-            "Magic keyword not provided".to_string(),
-        );
+        _ => return Err((StatusCode::UNSUPPORTED_MEDIA_TYPE, "")),
     }
+    .ok_or((StatusCode::BAD_REQUEST, "Invalid manifest"))?;
 
-    let get_valid_orders = || {
-        if let Some(orders) = get_orders(&manifest) {
-            if !orders.is_empty() {
-                return Some(orders);
-            }
-        }
-        None
-    };
+    get_keywords(&manifest)
+        .filter(|&keywords| keywords.contains(&"Christmas 2024".to_string()))
+        .ok_or((StatusCode::BAD_REQUEST, "Magic keyword not provided"))?;
 
-    if let Some(orders) = get_valid_orders() {
-        (
-            StatusCode::OK,
-            orders
-                .iter()
-                .map(Order::to_string)
-                .collect::<Vec<_>>()
-                .join("\n"),
-        )
+    if let Some(orders) = get_orders(&manifest).filter(|orders| !orders.is_empty()) {
+        Ok(orders.iter().join("\n"))
     } else {
-        (StatusCode::NO_CONTENT, String::new())
+        Err((StatusCode::NO_CONTENT, ""))
     }
 }
 
